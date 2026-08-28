@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card, Header, Screen, SearchField, SecondaryButton, StatusBadge } from '@/components/UI';
 import { useApp } from '@/context/AppContext';
@@ -10,6 +10,9 @@ export default function PeopleScreen() {
   const { data, session } = useApp();
   const [query, setQuery] = useState('');
   const isAdmin = session?.role === 'admin';
+  const q = query.trim().toLowerCase();
+  const filtered = data.employees.filter(e => !q || `${e.name} ${e.registration} ${e.sector} ${e.jobTitle} ${e.status}`.toLowerCase().includes(q));
+
   if (!isAdmin) {
     const me = data.employees.find(e => e.id === session?.employeeId);
     return <Screen safeTop>
@@ -20,11 +23,6 @@ export default function PeopleScreen() {
       </Card> : null}
     </Screen>;
   }
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return data.employees.filter(e => !q || `${e.name} ${e.registration} ${e.sector} ${e.jobTitle} ${e.status}`.toLowerCase().includes(q));
-  }, [data.employees, query]);
 
   return <Screen safeTop>
     <Header title="Pessoas" subtitle={`${data.employees.length} colaboradores cadastrados`} right={<Pressable accessibilityLabel="Cadastrar colaborador" onPress={() => router.push('/employee-form')} style={styles.add}><Ionicons name="add" size={24} color="#fff"/></Pressable>} />

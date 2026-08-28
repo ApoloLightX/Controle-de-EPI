@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { demoData } from '../data/demo';
 import { applyStockExit, calculatePurchaseTotal, canCompleteSwap, canDeliver, nextSwapStatusForApproval } from '../domain/rules';
@@ -172,7 +172,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await commit({ ...data, epis, purchases: [purchase, ...data.purchases], movements: [...movements, ...data.movements] });
   };
 
-  const value = useMemo<AppContextValue>(() => ({ ready, data, session, loginAdmin, loginEmployee, logout, resetDemo, addEmployee, updateEmployee, deleteEmployee, addEpi, updateEpi, deleteEpi, registerDelivery, createSwap, setSwapStatus, registerPurchase }), [ready, data, session]);
+  const value: AppContextValue = { ready, data, session, loginAdmin, loginEmployee, logout, resetDemo, addEmployee, updateEmployee, deleteEmployee, addEpi, updateEpi, deleteEpi, registerDelivery, createSwap, setSwapStatus, registerPurchase };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 

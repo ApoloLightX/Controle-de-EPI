@@ -4,7 +4,7 @@ import { AppData } from '../models';
 import { getStockStatus } from '../domain/rules';
 import { money, shortDate } from './format';
 
-function bars(items: Array<{ label: string; value: number }>, color: string) {
+function bars(items: { label: string; value: number }[], color: string) {
   const max = Math.max(1, ...items.map(i => i.value));
   return items.map(i => `<div class="bar-row"><span>${i.label}</span><div class="bar"><i style="width:${Math.round((i.value/max)*100)}%;background:${color}"></i></div><strong>${i.value}</strong></div>`).join('');
 }

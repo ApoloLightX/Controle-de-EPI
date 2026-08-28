@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card, EmptyState, Header, Screen, SearchField, StatusBadge } from '@/components/UI';
 import { useApp } from '@/context/AppContext';
@@ -22,9 +22,17 @@ export default function StockScreen() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<FilterStatus>('Todos');
   const [criticality, setCriticality] = useState<Criticality>('Todos');
-  const categories = useMemo(() => ['Todas', ...Array.from(new Set(data.epis.map(e => e.category)))], [data.epis]);
+  const categories = ['Todas', ...Array.from(new Set(data.epis.map(e => e.category)))];
   const [category, setCategory] = useState('Todas');
   const isAdmin = session?.role === 'admin';
+  const q = query.trim().toLowerCase();
+  const filtered = data.epis.filter(epi => {
+    const okQ = !q || `${epi.name} ${epi.category} ${epi.brand} ${epi.model} ${epi.ca} ${epi.supplier}`.toLowerCase().includes(q);
+    const okStatus = status === 'Todos' || getStockStatus(epi) === status;
+    const okCriticality = criticality === 'Todos' || getCriticality(epi.stock, epi.minStock) === criticality;
+    const okCategory = category === 'Todas' || epi.category === category;
+    return okQ && okStatus && okCriticality && okCategory;
+  });
 
   if (!isAdmin) {
     const deliveries = data.deliveries.filter(d => d.employeeId === session?.employeeId);
@@ -40,15 +48,6 @@ export default function StockScreen() {
       </Card> : null) : <EmptyState title="Nenhum EPI recebido" body="Suas entregas aparecerão aqui." />}
     </Screen>;
   }
-
-  const filtered = useMemo(() => data.epis.filter(epi => {
-    const q = query.trim().toLowerCase();
-    const okQ = !q || `${epi.name} ${epi.category} ${epi.brand} ${epi.model} ${epi.ca} ${epi.supplier}`.toLowerCase().includes(q);
-    const okStatus = status === 'Todos' || getStockStatus(epi) === status;
-    const okCriticality = criticality === 'Todos' || getCriticality(epi.stock, epi.minStock) === criticality;
-    const okCategory = category === 'Todas' || epi.category === category;
-    return okQ && okStatus && okCriticality && okCategory;
-  }), [data.epis, query, status, criticality, category]);
 
   const cycleStatus = () => setStatus(s => s === 'Todos' ? 'Normal' : s === 'Normal' ? 'Estoque baixo' : s === 'Estoque baixo' ? 'Sem estoque' : 'Todos');
   const cycleCriticality = () => setCriticality(s => s === 'Todos' ? 'Crítico' : s === 'Crítico' ? 'Atenção' : s === 'Atenção' ? 'Regular' : 'Todos');
