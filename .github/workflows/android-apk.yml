@@ -1,0 +1,56 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "README.md"
+
+jobs:
+  build-apk:
+    name: Build APK instalavel
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Verificar TypeScript e testes
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Gerar projeto Android nativo
+        run: npx expo prebuild --platform android --clean --non-interactive
+
+      - name: Compilar APK de teste
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Renomear APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk ATC-Controle-EPI.apk
+
+      - name: Publicar APK para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: ATC-Controle-EPI-APK
+          path: ATC-Controle-EPI.apk
+          if-no-files-found: error
+          retention-days: 30

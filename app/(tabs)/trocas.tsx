@@ -1,0 +1,13 @@
+import { router } from 'expo-router';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Card, EmptyState, Header, Screen, SecondaryButton, StatusBadge } from '@/components/UI';
+import { useApp } from '@/context/AppContext';
+import { colors } from '@/theme';
+import { shortDate } from '@/utils/format';
+
+export default function SwapsScreen(){
+  const{data,session,setSwapStatus}=useApp();const isAdmin=session?.role==='admin';const swaps=(isAdmin?data.swaps:data.swaps.filter(s=>s.employeeId===session?.employeeId));
+  const act=async(id:string,action:'approve'|'reject'|'analysis'|'complete')=>{const ok=await setSwapStatus(id,action);if(!ok)Alert.alert('Ação indisponível',action==='complete'?'É necessário estoque disponível e uma troca aprovada ou aguardando estoque.':'Não foi possível atualizar esta solicitação.');};
+  return <Screen safeTop><Header title="Trocas" subtitle={isAdmin?'Analise e conclua solicitações conforme o estoque.':'Acompanhe suas solicitações de troca.'} right={<Pressable onPress={()=>router.push('/swap/new')} style={styles.add}><Text style={styles.addText}>+ Nova</Text></Pressable>}/>{swaps.length?swaps.map(s=>{const emp=data.employees.find(e=>e.id===s.employeeId);const epi=data.epis.find(e=>e.id===s.epiId);return <Card key={s.id} style={{gap:10}}><View style={styles.top}><View style={{flex:1}}><Text style={styles.title}>{epi?.name??'EPI'}</Text><Text style={styles.meta}>{emp?.name??'Colaborador'} • {shortDate(s.createdAt)}</Text></View><StatusBadge label={s.status}/></View><Text style={styles.reason}>{s.reason}</Text><Text style={styles.meta}>{s.description}</Text>{s.photoUri?<Text style={styles.photo}>Foto anexada</Text>:null}{isAdmin?<View style={styles.actions}>{['Pendente','Em análise'].includes(s.status)?<SecondaryButton label="Aprovar" onPress={()=>act(s.id,'approve')}/>:null}{s.status==='Pendente'?<SecondaryButton label="Analisar" onPress={()=>act(s.id,'analysis')}/>:null}{!['Concluída','Reprovada'].includes(s.status)?<SecondaryButton label="Reprovar" onPress={()=>act(s.id,'reject')}/>:null}{['Aprovada','Aguardando estoque'].includes(s.status)?<SecondaryButton label="Concluir" onPress={()=>act(s.id,'complete')}/>:null}</View>:null}</Card>}):<EmptyState title="Nenhuma troca" body="As solicitações aparecerão aqui."/>}</Screen>;
+}
+const styles=StyleSheet.create({add:{backgroundColor:'#EAF1FF',paddingHorizontal:13,paddingVertical:9,borderRadius:12},addText:{color:colors.blue,fontWeight:'900'},top:{flexDirection:'row',gap:10,alignItems:'flex-start'},title:{fontWeight:'900',fontSize:16,color:colors.text},meta:{color:colors.muted,fontSize:12,lineHeight:17},reason:{fontWeight:'800',color:colors.text},photo:{color:colors.blue,fontWeight:'800',fontSize:12},actions:{gap:8}});

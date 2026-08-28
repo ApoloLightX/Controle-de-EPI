@@ -1,0 +1,9 @@
+import { StyleSheet, Text } from 'react-native';
+import { Card, EmptyState, Screen, SectionTitle, StatusBadge } from '@/components/UI';
+import { useApp } from '@/context/AppContext';
+import { getStockStatus } from '@/domain/rules';
+import { colors } from '@/theme';
+import { shortDate } from '@/utils/format';
+
+export default function Alerts(){const{data,session}=useApp();const isAdmin=session?.role==='admin';const stock=isAdmin?data.epis.filter(e=>getStockStatus(e)!=='Normal'):[];const expiries=isAdmin?data.epis.filter(e=>new Date(e.caValidity).getTime()-Date.now()<1000*60*60*24*180):[];const swaps=(isAdmin?data.swaps:data.swaps.filter(s=>s.employeeId===session?.employeeId)).filter(s=>!['Concluída','Reprovada'].includes(s.status));return <Screen>{isAdmin?<><SectionTitle>Baixo estoque e ruptura</SectionTitle>{stock.length?stock.map(e=><Card key={e.id}><Text style={styles.title}>{e.name}</Text><Text style={styles.meta}>Atual {e.stock} • mínimo {e.minStock}</Text><StatusBadge label={getStockStatus(e)}/></Card>):<EmptyState title="Estoque saudável" body="Nenhum item abaixo do mínimo."/>}<SectionTitle>Vencimentos próximos</SectionTitle>{expiries.length?expiries.map(e=><Card key={e.id}><Text style={styles.title}>{e.name}</Text><Text style={styles.meta}>CA {e.ca} • validade {shortDate(e.caValidity)}</Text></Card>):<EmptyState title="Sem vencimentos críticos" body="Nenhum CA próximo do período de atenção configurado."/>}</>:null}<SectionTitle>Trocas pendentes</SectionTitle>{swaps.length?swaps.map(s=><Card key={s.id}><Text style={styles.title}>{data.epis.find(e=>e.id===s.epiId)?.name??'EPI'}</Text><Text style={styles.meta}>{s.reason}</Text><StatusBadge label={s.status}/></Card>):<EmptyState title="Sem trocas pendentes" body="Nenhuma ação necessária agora."/>}</Screen>}
+const styles=StyleSheet.create({title:{fontWeight:'900',color:colors.text,marginBottom:4},meta:{color:colors.muted,fontSize:12,marginBottom:8}});

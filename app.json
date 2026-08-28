@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "ATC Controle EPI",
+    "slug": "atc-controle-epi",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "atccontroleepi",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "splash": { "image": "./assets/splash.png", "resizeMode": "contain", "backgroundColor": "#F7F8FA" },
+    "android": {
+      "package": "com.atc.controleepi",
+      "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#1463FF" }
+    },
+    "web": { "favicon": "./assets/favicon.png" },
+    "plugins": ["expo-router", "expo-document-picker"],
+    "experiments": { "typedRoutes": true }
+  }
+}
