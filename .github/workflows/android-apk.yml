@@ -31,11 +31,28 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
+      - name: Normalizar imagens PNG
+        run: |
+          python -m pip install --disable-pip-version-check pillow
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          for name in ["icon.png", "adaptive-icon.png", "splash.png", "favicon.png"]:
+              path = Path("assets") / name
+              with Image.open(path) as image:
+                  normalized = image.convert("RGBA")
+                  normalized.save(path, format="PNG", optimize=False, compress_level=6)
+                  print(f"PNG normalizado: {path}")
+          PY
+
       - name: Verificar lint TypeScript e testes
         run: npm run check
 
       - name: Gerar projeto Android nativo
-        run: npx expo prebuild --platform android --clean --non-interactive
+        env:
+          CI: "1"
+        run: npx expo prebuild --platform android --clean
 
       - name: Compilar APK de teste
         working-directory: android
