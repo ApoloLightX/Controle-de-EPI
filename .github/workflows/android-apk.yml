@@ -31,10 +31,8 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
-      - name: Verificar TypeScript e testes
-        run: |
-          npm run typecheck
-          npm test
+      - name: Verificar lint TypeScript e testes
+        run: npm run check
 
       - name: Gerar projeto Android nativo
         run: npx expo prebuild --platform android --clean --non-interactive
