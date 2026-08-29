@@ -28,6 +28,29 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Preservar assinatura Android entre builds
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: atc-controle-epi-debug-keystore-v1
+
+      - name: Garantir chave de assinatura do app
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair \
+              -storetype JKS \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=ATC Controle EPI, OU=Android, O=ATC, L=Sao Paulo, ST=SP, C=BR"
+          fi
+          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey >/dev/null
+
       - name: Instalar dependencias
         run: npm install
 
@@ -41,7 +64,6 @@ jobs:
           BLUE = "#1463FF"
           GREEN = "#16845B"
           WHITE = "#FFFFFF"
-          BG = "#F7F8FA"
           assets = Path("assets")
           assets.mkdir(exist_ok=True)
 
@@ -52,13 +74,11 @@ jobs:
               if with_blue_bg:
                   draw.rectangle(box, fill=BLUE)
 
-              cx = x0 + w * 0.50
               top = y0 + h * 0.19
               helmet_left = x0 + w * 0.20
               helmet_right = x0 + w * 0.80
               helmet_bottom = y0 + h * 0.50
 
-              # Capacete
               draw.pieslice(
                   [helmet_left, top, helmet_right, y0 + h * 0.67],
                   start=180, end=360, fill=WHITE
@@ -72,7 +92,6 @@ jobs:
                   radius=max(2, int(w * 0.015)), fill=WHITE
               )
 
-              # Oculos de protecao
               stroke = max(3, int(w * 0.035))
               draw.rounded_rectangle(
                   [x0 + w * 0.24, y0 + h * 0.51, x0 + w * 0.76, y0 + h * 0.69],
@@ -87,7 +106,6 @@ jobs:
                   fill=WHITE, width=stroke
               )
 
-              # Escudo de conformidade
               shield = [
                   (x0 + w * 0.64, y0 + h * 0.62),
                   (x0 + w * 0.82, y0 + h * 0.56),
@@ -104,24 +122,20 @@ jobs:
                   fill=WHITE, width=check_w, joint="curve"
               )
 
-          # Icone quadrado, sem texto e sem cantos arredondados
           icon = Image.new("RGBA", (1024, 1024), BLUE)
-          draw_mark(icon, (90, 90, 934, 934), with_blue_bg=False)
+          draw_mark(icon, (90, 90, 934, 934))
           icon.save(assets / "icon.png", "PNG", optimize=False, compress_level=6)
 
-          # Foreground do adaptive icon: fundo transparente
           adaptive = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
-          draw_mark(adaptive, (170, 170, 854, 854), with_blue_bg=False)
+          draw_mark(adaptive, (170, 170, 854, 854))
           adaptive.save(assets / "adaptive-icon.png", "PNG", optimize=False, compress_level=6)
 
-          # Splash: marca centralizada sobre fundo transparente; app.json fornece #F7F8FA
           splash = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))
           draw = ImageDraw.Draw(splash)
           draw.rectangle((252, 252, 772, 772), fill=BLUE)
-          draw_mark(splash, (292, 292, 732, 732), with_blue_bg=False)
+          draw_mark(splash, (292, 292, 732, 732))
           splash.save(assets / "splash.png", "PNG", optimize=False, compress_level=6)
 
-          # Favicon
           favicon = icon.resize((64, 64), Image.Resampling.LANCZOS)
           favicon.save(assets / "favicon.png", "PNG", optimize=False, compress_level=6)
 
@@ -137,8 +151,29 @@ jobs:
           CI: "1"
         run: npx expo prebuild --platform android --clean
 
+      - name: Preparar APK como atualizacao do app instalado
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path("android/app/build.gradle")
+          text = path.read_text()
+          version_code = os.environ["VERSION_CODE"]
+          updated, count = re.subn(r"versionCode\s+\d+", f"versionCode {version_code}", text, count=1)
+          if count != 1:
+              raise SystemExit("Nao foi possivel atualizar versionCode")
+          path.write_text(updated)
+          print(f"versionCode Android definido como {version_code}")
+          PY
+
       - name: Compilar APK de teste
         working-directory: android
+        env:
+          NODE_ENV: production
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Renomear APK
