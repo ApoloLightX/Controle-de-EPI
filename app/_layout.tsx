@@ -14,6 +14,7 @@ export default function RootLayout() {
         <Stack.Screen name="person/[id]" options={{ title: 'Ficha do colaborador' }} />
         <Stack.Screen name="employee-form" options={{ title: 'Colaborador' }} />
         <Stack.Screen name="epi/new" options={{ title: 'Cadastrar EPI' }} />
+        <Stack.Screen name="epi/edit" options={{ title: 'Ficha do EPI' }} />
         <Stack.Screen name="delivery/new" options={{ title: 'Registrar entrega' }} />
         <Stack.Screen name="purchases" options={{ title: 'Compras' }} />
         <Stack.Screen name="purchase/new" options={{ title: 'Registrar compra' }} />
