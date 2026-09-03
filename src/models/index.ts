@@ -3,6 +3,7 @@ export type EmployeeStatus = 'Ativo' | 'Inativo' | 'Afastado';
 export type StockStatus = 'Normal' | 'Estoque baixo' | 'Sem estoque';
 export type SwapStatus = 'Pendente' | 'Em análise' | 'Aprovada' | 'Reprovada' | 'Aguardando estoque' | 'Concluída';
 export type MovementType = 'Entrada' | 'Saída';
+export type CaAlertLevel = 'Ok' | 'Atenção' | 'Crítico' | 'Vencido';
 
 export interface Session {
   role: UserRole;
@@ -53,12 +54,16 @@ export interface SwapRequest {
   id: string;
   employeeId: string;
   epiId: string;
+  quantity?: number;
   reason: string;
   description: string;
   photoUri?: string;
   status: SwapStatus;
+  adminNote?: string;
+  rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
+  resolvedAt?: string;
 }
 
 export interface PurchaseItem {
