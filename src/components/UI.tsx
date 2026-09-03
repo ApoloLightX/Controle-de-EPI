@@ -37,14 +37,17 @@ export function PrimaryButton({ label, onPress, icon, danger, loading, disabled 
   </Pressable>;
 }
 
-export function SecondaryButton({ label, onPress, icon }: { label: string; onPress: () => void; icon?: keyof typeof Ionicons.glyphMap }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.secondary, pressed && { opacity: .7 }]}>{icon ? <Ionicons name={icon} size={18} color={colors.blue} /> : null}<Text style={styles.secondaryText}>{label}</Text></Pressable>;
+export function SecondaryButton({ label, onPress, icon, danger, disabled }: { label: string; onPress: () => void; icon?: keyof typeof Ionicons.glyphMap; danger?: boolean; disabled?: boolean }) {
+  const textColor = danger ? colors.red : colors.blue;
+  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.secondary, danger && styles.secondaryDanger, disabled && { opacity: .45 }, pressed && { opacity: .7 }]}>{icon ? <Ionicons name={icon} size={18} color={textColor} /> : null}<Text style={[styles.secondaryText, danger && { color: colors.red }]}>{label}</Text></Pressable>;
 }
 
 export function StatusBadge({ label }: { label: string }) {
-  const palette = label === 'Normal' || label === 'Ativo' || label === 'Aprovada' || label === 'Concluída' ? [colors.greenSoft, colors.green]
-    : label === 'Estoque baixo' || label === 'Pendente' || label === 'Em análise' || label === 'Aguardando estoque' ? [colors.orangeSoft, '#9A6700']
-    : [colors.redSoft, colors.red];
+  const green = ['Normal', 'Ativo', 'Aprovada', 'Concluída', 'Ok'].includes(label);
+  const orange = ['Estoque baixo', 'Pendente', 'Em análise', 'Aguardando estoque', 'Atenção'].includes(label);
+  const palette = green ? [colors.greenSoft, colors.green]
+    : orange ? [colors.orangeSoft, '#9A6700']
+      : [colors.redSoft, colors.red];
   return <View style={[styles.badge, { backgroundColor: palette[0] }]}><Text style={[styles.badgeText, { color: palette[1] }]}>{label}</Text></View>;
 }
 
@@ -69,7 +72,7 @@ const styles = StyleSheet.create({
   search: { height: 48, borderRadius: radius.md, backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, gap: 9 }, searchInput: { flex: 1, color: colors.text, fontSize: 15 },
   label: { color: colors.text, fontWeight: '700', fontSize: 13 }, input: { minHeight: 48, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14, color: colors.text, fontSize: 15 },
   primary: { minHeight: 50, borderRadius: radius.md, backgroundColor: colors.blue, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 16 }, primaryText: { color: '#fff', fontWeight: '800', fontSize: 15 },
-  secondary: { minHeight: 44, borderRadius: radius.md, borderWidth: 1, borderColor: '#C9D8FF', backgroundColor: colors.blueSoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 14 }, secondaryText: { color: colors.blue, fontWeight: '800' },
+  secondary: { minHeight: 44, borderRadius: radius.md, borderWidth: 1, borderColor: '#C9D8FF', backgroundColor: colors.blueSoft, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 14 }, secondaryDanger: { borderColor: '#F5C2C7', backgroundColor: colors.redSoft }, secondaryText: { color: colors.blue, fontWeight: '800' },
   badge: { alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 5, borderRadius: radius.pill }, badgeText: { fontSize: 11, fontWeight: '800' },
   metric: { minWidth: '47%', flex: 1, gap: 6 }, iconCircle: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, metricLabel: { color: colors.muted, fontSize: 12, fontWeight: '600' }, metricValue: { color: colors.text, fontSize: 20, fontWeight: '900' },
   sectionTitle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }, sectionTitleText: { fontSize: 18, fontWeight: '800', color: colors.text },
