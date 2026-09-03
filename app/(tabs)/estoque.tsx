@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card, EmptyState, Header, Screen, SearchField, StatusBadge } from '@/components/UI';
 import { useApp } from '@/context/AppContext';
-import { getStockStatus } from '@/domain/rules';
+import { getCaAlertLevel, getStockStatus } from '@/domain/rules';
 import { colors, radius } from '@/theme';
 import { money, shortDate } from '@/utils/format';
 
@@ -44,7 +44,7 @@ export default function StockScreen() {
       <Header title="Meus EPIs" subtitle="Equipamentos registrados no seu histórico de entrega." />
       {byEpi.length ? byEpi.map(({ epi, qty }) => epi ? <Card key={epi.id} style={{ gap: 8 }}>
         <View style={styles.top}><View style={{ flex: 1 }}><Text style={styles.name}>{epi.name}</Text><Text style={styles.meta}>{epi.brand} {epi.model} • Tam. {epi.size}</Text></View><View style={styles.qty}><Text style={styles.qtyText}>{qty}</Text></View></View>
-        <Text style={styles.meta}>CA {epi.ca} • validade {shortDate(epi.caValidity)}</Text>
+        <View style={styles.line}><Text style={styles.meta}>CA {epi.ca} • validade {shortDate(epi.caValidity)}</Text><StatusBadge label={getCaAlertLevel(epi.caValidity)} /></View>
       </Card> : null) : <EmptyState title="Nenhum EPI recebido" body="Suas entregas aparecerão aqui." />}
     </Screen>;
   }
@@ -67,8 +67,9 @@ export default function StockScreen() {
     {filtered.length ? filtered.map(epi => <Card key={epi.id} style={{ gap: 10 }}>
       <View style={styles.top}><View style={{ flex: 1 }}><Text style={styles.name}>{epi.name}</Text><Text style={styles.meta}>{epi.category} • {epi.brand} {epi.model} • Tam. {epi.size}</Text></View><StatusBadge label={getStockStatus(epi)} /></View>
       <View style={styles.line}><Text style={styles.stock}>Estoque {epi.stock}</Text><Text style={styles.meta}>Mínimo {epi.minStock}</Text><Text style={styles.meta}>Criticidade {getCriticality(epi.stock, epi.minStock)}</Text></View>
-      <Text style={styles.meta}>CA {epi.ca} • validade {shortDate(epi.caValidity)} • última compra {shortDate(epi.lastPurchase)}</Text>
-      <Text style={styles.meta}>{money(epi.unitValue)} • {epi.supplier}</Text>
+      <View style={styles.line}><Text style={styles.meta}>CA {epi.ca} • validade {shortDate(epi.caValidity)}</Text><StatusBadge label={getCaAlertLevel(epi.caValidity)} /></View>
+      <Text style={styles.meta}>{money(epi.unitValue)} • {epi.supplier} • última compra {shortDate(epi.lastPurchase)}</Text>
+      <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/epi/edit', params: { id: epi.id } })} style={styles.manage}><Ionicons name="create-outline" size={18} color={colors.blue} /><Text style={styles.manageText}>Ver ficha e editar</Text><Ionicons name="chevron-forward" size={18} color={colors.blue} /></Pressable>
     </Card>) : <EmptyState title="Nenhum item encontrado" body="Ajuste os filtros ou a busca para ver outros EPIs." />}
   </Screen>;
 }
@@ -82,9 +83,10 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   name: { fontWeight: '900', color: colors.text, fontSize: 16 },
   meta: { color: colors.muted, fontSize: 12, lineHeight: 17 },
-  line: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center' }, stock: { fontWeight: '900', color: colors.text },
+  line: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, alignItems: 'center' }, stock: { fontWeight: '900', color: colors.text },
   filters: { gap: 8 },
   filter: { minHeight: 40, paddingHorizontal: 13, borderRadius: radius.pill, backgroundColor: '#EAF1FF', flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start', maxWidth: '100%' },
   filterText: { fontWeight: '800', color: colors.blue, fontSize: 13, flexShrink: 1 },
-  qty: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#E8F5EF', alignItems: 'center', justifyContent: 'center' }, qtyText: { fontWeight: '900', color: colors.green }
+  qty: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#E8F5EF', alignItems: 'center', justifyContent: 'center' }, qtyText: { fontWeight: '900', color: colors.green },
+  manage: { minHeight: 44, borderRadius: 12, backgroundColor: '#F5F8FF', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12 }, manageText: { flex: 1, color: colors.blue, fontWeight: '900', fontSize: 13 },
 });
