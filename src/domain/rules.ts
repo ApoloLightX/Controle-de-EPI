@@ -1,4 +1,4 @@
-import type { Epi, PurchaseItem, SwapRequest } from '../models';
+import type { CaAlertLevel, Epi, PurchaseItem, SwapRequest } from '../models';
 
 export function getStockStatus(epi: Pick<Epi, 'stock' | 'minStock'>) {
   if (epi.stock <= 0) return 'Sem estoque' as const;
@@ -18,15 +18,34 @@ export function applyStockExit(stock: number, quantity: number) {
 
 export function calculatePurchaseTotal(items: PurchaseItem[]) {
   return items.reduce((total, item) => {
-    if (item.quantity <= 0 || item.unitValue < 0) throw new Error('Item de compra inválido');
+    if (!Number.isInteger(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitValue) || item.unitValue < 0) {
+      throw new Error('Item de compra inválido');
+    }
     return total + item.quantity * item.unitValue;
   }, 0);
+}
+
+export function daysUntil(date: string, now = new Date()) {
+  const target = new Date(`${date}T23:59:59`);
+  if (Number.isNaN(target.getTime())) return Number.NaN;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.ceil((target.getTime() - today.getTime()) / 86_400_000);
+}
+
+export function getCaAlertLevel(caValidity: string, now = new Date()): CaAlertLevel {
+  const days = daysUntil(caValidity, now);
+  if (!Number.isFinite(days)) return 'Crítico';
+  if (days < 0) return 'Vencido';
+  if (days <= 30) return 'Crítico';
+  if (days <= 90) return 'Atenção';
+  return 'Ok';
 }
 
 export function nextSwapStatusForApproval(epi: Pick<Epi, 'stock'>, quantity = 1) {
   return epi.stock >= quantity ? 'Aprovada' as const : 'Aguardando estoque' as const;
 }
 
-export function canCompleteSwap(swap: Pick<SwapRequest, 'status'>, epi: Pick<Epi, 'stock'>) {
-  return ['Aprovada', 'Aguardando estoque'].includes(swap.status) && epi.stock > 0;
+export function canCompleteSwap(swap: Pick<SwapRequest, 'status' | 'quantity'>, epi: Pick<Epi, 'stock'>) {
+  const quantity = swap.quantity ?? 1;
+  return ['Aprovada', 'Aguardando estoque'].includes(swap.status) && Number.isInteger(quantity) && quantity > 0 && epi.stock >= quantity;
 }
