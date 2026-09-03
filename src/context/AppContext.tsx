@@ -101,7 +101,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addEpi = async (input: EpiInput) => {
-    await commit({ ...data, epis: [...data.epis, { ...input, id: id('epi'), lastPurchase: nowDate() }] });
+    const epiId = id('epi');
+    const createdAt = nowDate();
+    const epi: Epi = { ...input, id: epiId, lastPurchase: createdAt };
+    const initialMovement = input.stock > 0 ? [{ id: id('mov'), epiId, type: 'Entrada' as const, quantity: input.stock, referenceType: 'Ajuste' as const, referenceId: epiId, createdAt }] : [];
+    await commit({ ...data, epis: [...data.epis, epi], movements: [...initialMovement, ...data.movements] });
   };
 
   const updateEpi = async (epi: Epi) => {
