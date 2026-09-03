@@ -31,9 +31,10 @@ test('aprovação e conclusão de trocas considera quantidade', () => {
 
 test('alertas de validade do CA', () => {
   const now = new Date(2026, 8, 3);
-  assert.equal(daysUntil('2026-09-03', now), 1);
+  assert.equal(daysUntil('2026-09-03', now), 0);
   assert.equal(getCaAlertLevel('2026-09-02', now), 'Vencido');
   assert.equal(getCaAlertLevel('2026-09-20', now), 'Crítico');
   assert.equal(getCaAlertLevel('2026-11-15', now), 'Atenção');
   assert.equal(getCaAlertLevel('2027-01-01', now), 'Ok');
+  assert.equal(Number.isNaN(daysUntil('2026-02-31', now)), true);
 });
