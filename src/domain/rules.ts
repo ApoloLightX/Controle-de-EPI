@@ -26,10 +26,15 @@ export function calculatePurchaseTotal(items: PurchaseItem[]) {
 }
 
 export function daysUntil(date: string, now = new Date()) {
-  const target = new Date(`${date}T23:59:59`);
-  if (Number.isNaN(target.getTime())) return Number.NaN;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return Number.NaN;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const target = new Date(year, month - 1, day);
+  if (target.getFullYear() !== year || target.getMonth() !== month - 1 || target.getDate() !== day) return Number.NaN;
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.ceil((target.getTime() - today.getTime()) / 86_400_000);
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
 }
 
 export function getCaAlertLevel(caValidity: string, now = new Date()): CaAlertLevel {
