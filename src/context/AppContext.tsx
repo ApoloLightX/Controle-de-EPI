@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { demoData } from '../data/demo';
 import { applyStockExit, calculatePurchaseTotal, canCompleteSwap, canDeliver, nextSwapStatusForApproval } from '../domain/rules';
-import { AppData, Delivery, Epi, Employee, Purchase, Session, SwapRequest } from '../models';
+import type { AppData, Delivery, Epi, Employee, Purchase, Session, SwapRequest } from '../models';
 import { id, nowDate } from '../utils/format';
 
 const DATA_KEY = '@atc-controle-epi:data:v1';
@@ -26,10 +26,10 @@ type AppContextValue = {
   deleteEmployee: (employeeId: string) => Promise<void>;
   addEpi: (input: EpiInput) => Promise<void>;
   updateEpi: (epi: Epi) => Promise<void>;
-  deleteEpi: (epiId: string) => Promise<void>;
+  deleteEpi: (epiId: string) => Promise<boolean>;
   registerDelivery: (employeeId: string, epiId: string, quantity: number, reason: string) => Promise<boolean>;
   createSwap: (input: Omit<SwapRequest, 'id' | 'status' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  setSwapStatus: (swapId: string, status: 'approve' | 'reject' | 'analysis' | 'complete') => Promise<boolean>;
+  setSwapStatus: (swapId: string, status: 'approve' | 'reject' | 'analysis' | 'complete', note?: string) => Promise<boolean>;
   registerPurchase: (input: PurchaseInput) => Promise<void>;
 };
 
@@ -88,7 +88,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addEmployee = async (input: EmployeeInput) => {
-    const initials = input.name.split(' ').slice(0,2).map(n=>n[0]?.toUpperCase()).join('') || 'EP';
+    const initials = input.name.split(' ').slice(0, 2).map(n => n[0]?.toUpperCase()).join('') || 'EP';
     await commit({ ...data, employees: [...data.employees, { ...input, id: id('emp'), avatarInitials: initials }] });
   };
 
@@ -109,7 +109,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteEpi = async (epiId: string) => {
+    const referenced = data.deliveries.some(d => d.epiId === epiId)
+      || data.swaps.some(s => s.epiId === epiId)
+      || data.purchases.some(p => p.items.some(item => item.epiId === epiId))
+      || data.movements.some(m => m.epiId === epiId);
+    if (referenced) return false;
     await commit({ ...data, epis: data.epis.filter(e => e.id !== epiId) });
+    return true;
   };
 
   const registerDelivery = async (employeeId: string, epiId: string, quantity: number, reason: string) => {
@@ -130,49 +136,146 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const createSwap = async (input: Omit<SwapRequest, 'id' | 'status' | 'createdAt' | 'updatedAt'>) => {
     const createdAt = nowDate();
-    const swap: SwapRequest = { ...input, id: id('swap'), status: 'Pendente', createdAt, updatedAt: createdAt };
+    const swap: SwapRequest = {
+      ...input,
+      quantity: input.quantity ?? 1,
+      id: id('swap'),
+      status: 'Pendente',
+      createdAt,
+      updatedAt: createdAt,
+    };
     await commit({ ...data, swaps: [swap, ...data.swaps] });
   };
 
-  const setSwapStatus = async (swapId: string, action: 'approve' | 'reject' | 'analysis' | 'complete') => {
+  const setSwapStatus = async (swapId: string, action: 'approve' | 'reject' | 'analysis' | 'complete', note?: string) => {
     const swap = data.swaps.find(s => s.id === swapId);
     if (!swap) return false;
     const epi = data.epis.find(e => e.id === swap.epiId);
     if (!epi) return false;
+    const quantity = swap.quantity ?? 1;
+    const cleanNote = note?.trim();
 
     if (action === 'complete') {
       if (!canCompleteSwap(swap, epi)) return false;
       const deliveryId = id('del');
-      const nextStock = applyStockExit(epi.stock, 1);
+      const completedAt = nowDate();
+      const nextStock = applyStockExit(epi.stock, quantity);
       await commit({
         ...data,
         epis: data.epis.map(e => e.id === epi.id ? { ...e, stock: nextStock } : e),
-        swaps: data.swaps.map(s => s.id === swapId ? { ...s, status: 'Concluída', updatedAt: nowDate() } : s),
-        deliveries: [{ id: deliveryId, employeeId: swap.employeeId, epiId: swap.epiId, quantity: 1, reason: `Troca: ${swap.reason}`, deliveredAt: nowDate() }, ...data.deliveries],
-        movements: [{ id: id('mov'), epiId: epi.id, type: 'Saída', quantity: 1, referenceType: 'Troca', referenceId: swap.id, createdAt: nowDate() }, ...data.movements]
+        swaps: data.swaps.map(s => s.id === swapId ? {
+          ...s,
+          status: 'Concluída',
+          adminNote: cleanNote || s.adminNote,
+          updatedAt: completedAt,
+          resolvedAt: completedAt,
+        } : s),
+        deliveries: [{ id: deliveryId, employeeId: swap.employeeId, epiId: swap.epiId, quantity, reason: `Troca: ${swap.reason}`, deliveredAt: completedAt }, ...data.deliveries],
+        movements: [{ id: id('mov'), epiId: epi.id, type: 'Saída', quantity, referenceType: 'Troca', referenceId: swap.id, createdAt: completedAt }, ...data.movements],
       });
       return true;
     }
 
-    const status = action === 'approve' ? nextSwapStatusForApproval(epi) : action === 'reject' ? 'Reprovada' : 'Em análise';
-    await commit({ ...data, swaps: data.swaps.map(s => s.id === swapId ? { ...s, status, updatedAt: nowDate() } : s) });
+    const updatedAt = nowDate();
+    const status = action === 'approve'
+      ? nextSwapStatusForApproval(epi, quantity)
+      : action === 'reject'
+        ? 'Reprovada'
+        : 'Em análise';
+
+    await commit({
+      ...data,
+      swaps: data.swaps.map(s => s.id === swapId ? {
+        ...s,
+        status,
+        adminNote: action !== 'reject' && cleanNote ? cleanNote : s.adminNote,
+        rejectionReason: action === 'reject' ? cleanNote || 'Solicitação reprovada pelo administrador.' : s.rejectionReason,
+        updatedAt,
+        resolvedAt: action === 'reject' ? updatedAt : s.resolvedAt,
+      } : s),
+    });
     return true;
   };
 
   const registerPurchase = async (input: PurchaseInput) => {
     const total = calculatePurchaseTotal(input.items);
     const purchaseId = id('pur');
-    const purchase: Purchase = { ...input, id: purchaseId, total, purchasedAt: nowDate() };
-    const stockAdds = new Map(input.items.map(item => [item.epiId, item]));
+    const purchasedAt = nowDate();
+    const purchase: Purchase = { ...input, id: purchaseId, total, purchasedAt };
+
+    const aggregated = input.items.reduce<Map<string, { quantity: number; unitValue: number }>>((map, item) => {
+      const current = map.get(item.epiId);
+      if (current) {
+        map.set(item.epiId, { quantity: current.quantity + item.quantity, unitValue: item.unitValue });
+      } else {
+        map.set(item.epiId, { quantity: item.quantity, unitValue: item.unitValue });
+      }
+      return map;
+    }, new Map());
+
     const epis = data.epis.map(epi => {
-      const item = stockAdds.get(epi.id);
-      return item ? { ...epi, stock: epi.stock + item.quantity, unitValue: item.unitValue, supplier: input.supplier, lastPurchase: nowDate() } : epi;
+      const item = aggregated.get(epi.id);
+      return item ? {
+        ...epi,
+        stock: epi.stock + item.quantity,
+        unitValue: item.unitValue,
+        supplier: input.supplier,
+        lastPurchase: purchasedAt,
+      } : epi;
     });
-    const movements = input.items.map(item => ({ id: id('mov'), epiId: item.epiId, type: 'Entrada' as const, quantity: item.quantity, referenceType: 'Compra' as const, referenceId: purchaseId, createdAt: nowDate() }));
-    await commit({ ...data, epis, purchases: [purchase, ...data.purchases], movements: [...movements, ...data.movements] });
+
+    const stockByEpi = new Map(epis.map(epi => [epi.id, epi.stock]));
+    const swaps = data.swaps.map(swap => {
+      if (swap.status !== 'Aguardando estoque') return swap;
+      const quantity = swap.quantity ?? 1;
+      const stock = stockByEpi.get(swap.epiId) ?? 0;
+      return stock >= quantity ? {
+        ...swap,
+        status: 'Aprovada' as const,
+        adminNote: swap.adminNote || 'Estoque reposto. Solicitação liberada automaticamente.',
+        updatedAt: purchasedAt,
+      } : swap;
+    });
+
+    const movements = input.items.map(item => ({
+      id: id('mov'),
+      epiId: item.epiId,
+      type: 'Entrada' as const,
+      quantity: item.quantity,
+      referenceType: 'Compra' as const,
+      referenceId: purchaseId,
+      createdAt: purchasedAt,
+    }));
+
+    await commit({
+      ...data,
+      epis,
+      swaps,
+      purchases: [purchase, ...data.purchases],
+      movements: [...movements, ...data.movements],
+    });
   };
 
-  const value: AppContextValue = { ready, data, session, loginAdmin, loginEmployee, logout, resetDemo, addEmployee, updateEmployee, deleteEmployee, addEpi, updateEpi, deleteEpi, registerDelivery, createSwap, setSwapStatus, registerPurchase };
+  const value: AppContextValue = {
+    ready,
+    data,
+    session,
+    loginAdmin,
+    loginEmployee,
+    logout,
+    resetDemo,
+    addEmployee,
+    updateEmployee,
+    deleteEmployee,
+    addEpi,
+    updateEpi,
+    deleteEpi,
+    registerDelivery,
+    createSwap,
+    setSwapStatus,
+    registerPurchase,
+  };
+
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
