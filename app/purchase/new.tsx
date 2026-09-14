@@ -9,6 +9,7 @@ import { colors, radius } from '@/theme';
 import { calculatePurchaseTotal } from '@/domain/rules';
 import type { PurchaseItem } from '@/models';
 import { money } from '@/utils/format';
+import { persistPickedFile } from '@/utils/files';
 
 export default function PurchaseScreen() {
   const { data, session, registerPurchase } = useApp();
@@ -39,7 +40,7 @@ export default function PurchaseScreen() {
   const addItem = () => {
     const qty = Number(quantity.replace(',', '.'));
     const value = Number(unitValue.replace(',', '.'));
-    if (!epiId || !Number.isInteger(qty) || qty <= 0 || !Number.isFinite(value) || value < 0) {
+    if (!epiId || !data.epis.some(epi => epi.id === epiId) || !Number.isInteger(qty) || qty <= 0 || !Number.isFinite(value) || value < 0) {
       Alert.alert('Item inválido', 'Selecione o EPI e informe quantidade inteira e valor unitário válido.');
       return;
     }
@@ -54,10 +55,16 @@ export default function PurchaseScreen() {
   const removeItem = (id: string) => setItems(current => current.filter(item => item.epiId !== id));
 
   const pick = async () => {
-    const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false });
-    if (!result.canceled) {
-      setDocumentUri(result.assets[0]?.uri);
-      setDocumentName(result.assets[0]?.name ?? 'Documento anexado');
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset?.uri) return;
+      const persistedUri = await persistPickedFile(asset.uri, asset.name ?? 'documento', 'compra');
+      setDocumentUri(persistedUri);
+      setDocumentName(asset.name ?? 'Documento anexado');
+    } catch {
+      Alert.alert('Falha no anexo', 'Não foi possível salvar o documento selecionado.');
     }
   };
 
@@ -67,8 +74,9 @@ export default function PurchaseScreen() {
       return;
     }
     setSaving(true);
-    await registerPurchase({ supplier: supplier.trim(), cnpj: cnpj.trim(), invoice: invoice.trim(), items, documentUri });
+    const ok = await registerPurchase({ supplier: supplier.trim(), cnpj: cnpj.trim(), invoice: invoice.trim(), items, documentUri });
     setSaving(false);
+    if (!ok) return Alert.alert('Não foi possível registrar', 'Os dados da compra mudaram ou contêm um item inválido. Revise e tente novamente.');
     const units = items.reduce((sum, item) => sum + item.quantity, 0);
     Alert.alert('Compra registrada', `${items.length} EPI(s), ${units} unidade(s). Total ${money(total)}.`, [{ text: 'OK', onPress: () => router.back() }]);
   };
@@ -79,7 +87,7 @@ export default function PurchaseScreen() {
     <Field label="Nota fiscal" value={invoice} onChangeText={setInvoice} />
 
     <SectionTitle>Adicionar itens</SectionTitle>
-    {data.epis.length ? <View style={{ gap: 8 }}>{data.epis.map(e => <Pressable key={e.id} onPress={() => selectEpi(e.id)} style={[styles.choice, epiId === e.id && styles.active]}>
+    {data.epis.length ? <View style={{ gap: 8 }}>{data.epis.map(e => <Pressable accessibilityRole="radio" accessibilityState={{ checked: epiId === e.id }} key={e.id} onPress={() => selectEpi(e.id)} style={[styles.choice, epiId === e.id && styles.active]}>
       <View style={{ flex: 1 }}><Text style={[styles.choiceText, epiId === e.id && styles.activeText]}>{e.name}</Text><Text style={styles.meta}>Saldo {e.stock} • atual {money(e.unitValue)}</Text></View>
       {epiId === e.id ? <Ionicons name="checkmark-circle" size={21} color={colors.blue} /> : null}
     </Pressable>)}</View> : <Card><Text style={styles.meta}>Cadastre um EPI antes de registrar uma compra.</Text></Card>}
@@ -92,13 +100,13 @@ export default function PurchaseScreen() {
       const epi = data.epis.find(e => e.id === item.epiId);
       return <Card key={item.epiId} style={styles.itemCard}>
         <View style={{ flex: 1 }}><Text style={styles.itemTitle}>{epi?.name ?? 'EPI'}</Text><Text style={styles.meta}>{item.quantity} un. × {money(item.unitValue)} = {money(item.quantity * item.unitValue)}</Text></View>
-        <Pressable accessibilityLabel={`Remover ${epi?.name ?? 'item'}`} onPress={() => removeItem(item.epiId)} style={styles.remove}><Ionicons name="trash-outline" size={20} color={colors.red} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Remover ${epi?.name ?? 'item'}`} onPress={() => removeItem(item.epiId)} style={styles.remove}><Ionicons name="trash-outline" size={20} color={colors.red} /></Pressable>
       </Card>;
     }) : <Card><Text style={styles.meta}>Nenhum item adicionado ainda.</Text></Card>}
 
     <Card style={styles.totalCard}><View><Text style={styles.meta}>Total da compra</Text><Text style={styles.total}>{money(total)}</Text></View><Text style={styles.units}>{items.reduce((sum, item) => sum + item.quantity, 0)} unidade(s)</Text></Card>
 
-    <Pressable onPress={pick} style={styles.attach}><Ionicons name="attach" size={20} color={colors.blue} /><View style={{ flex: 1 }}><Text style={styles.attachText}>Anexar NF ou documento</Text><Text style={styles.meta}>{documentName}</Text></View></Pressable>
+    <Pressable accessibilityRole="button" onPress={pick} style={styles.attach}><Ionicons name="attach" size={20} color={colors.blue} /><View style={{ flex: 1 }}><Text style={styles.attachText}>Anexar NF ou documento</Text><Text style={styles.meta}>{documentName}</Text></View></Pressable>
     <PrimaryButton label="Registrar compra e dar entrada" icon="cart" loading={saving} disabled={items.length === 0} onPress={save} />
   </Screen>;
 }
