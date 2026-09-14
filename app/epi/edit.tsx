@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Card, EmptyState, Field, PrimaryButton, Screen, SectionTitle, StatusBadge } from '@/components/UI';
 import { useApp } from '@/context/AppContext';
-import { daysUntil, getCaAlertLevel, getStockStatus } from '@/domain/rules';
+import { daysUntil, getCaAlertLevel, getStockStatus, isValidIsoDate } from '@/domain/rules';
 import { colors } from '@/theme';
 import { money, shortDate } from '@/utils/format';
 
@@ -40,9 +40,9 @@ export default function EpiEditScreen() {
     const minimum = Number(minStock.replace(',', '.'));
     const value = Number(unitValue.replace(',', '.'));
     if (!Number.isInteger(minimum) || minimum < 0 || !Number.isFinite(value) || value < 0) return Alert.alert('Valores inválidos', 'Confira estoque mínimo e valor unitário.');
-    if (Number.isNaN(new Date(`${caValidity}T12:00:00`).getTime())) return Alert.alert('Data inválida', 'Use a validade do CA no formato AAAA-MM-DD.');
+    if (!isValidIsoDate(caValidity.trim())) return Alert.alert('Data inválida', 'Use a validade do CA no formato AAAA-MM-DD.');
     setSaving(true);
-    await updateEpi({ ...epi, name: name.trim(), category: category.trim(), brand: brand.trim(), model: model.trim(), size: size.trim(), ca: ca.trim(), caValidity, minStock: minimum, unitValue: value, supplier: supplier.trim() });
+    await updateEpi({ ...epi, name: name.trim(), category: category.trim(), brand: brand.trim(), model: model.trim(), size: size.trim(), ca: ca.trim(), caValidity: caValidity.trim(), minStock: minimum, unitValue: value, supplier: supplier.trim() });
     setSaving(false);
     Alert.alert('EPI atualizado', 'As alterações foram salvas neste dispositivo.');
   };
