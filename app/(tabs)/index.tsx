@@ -4,13 +4,13 @@ import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card, DemoBanner, Header, Metric, PrimaryButton, Screen, SearchField, SectionTitle, StatusBadge } from '@/components/UI';
 import { useApp } from '@/context/AppContext';
-import { getStockStatus } from '@/domain/rules';
+import { getStockStatus, isWithinPastDays } from '@/domain/rules';
 import { colors, radius } from '@/theme';
 import { money, shortDate } from '@/utils/format';
 import { exportConsolidatedPdf } from '@/utils/report';
 
 function Shortcut({ icon, label, onPress, tone = colors.blue }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; tone?: string }) {
-  return <Pressable onPress={onPress} style={({pressed}) => [styles.shortcut, pressed && { opacity: .65 }]}><View style={[styles.shortcutIcon,{ backgroundColor: `${tone}16` }]}><Ionicons name={icon} size={22} color={tone} /></View><Text style={styles.shortcutText}>{label}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({pressed}) => [styles.shortcut, pressed && { opacity: .65 }]}><View style={[styles.shortcutIcon,{ backgroundColor: `${tone}16` }]}><Ionicons name={icon} size={22} color={tone} /></View><Text style={styles.shortcutText}>{label}</Text></Pressable>;
 }
 
 export default function HomeScreen() {
@@ -26,6 +26,7 @@ export default function HomeScreen() {
   const attention = data.epis.filter(e => getStockStatus(e) !== 'Normal');
   const spend = data.purchases.reduce((sum, p) => sum + p.total, 0);
   const pending = data.swaps.filter(s => ['Pendente','Em análise','Aguardando estoque'].includes(s.status));
+  const recentSwaps = data.swaps.filter(s => isWithinPastDays(s.createdAt, 30)).length;
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -58,12 +59,12 @@ export default function HomeScreen() {
     <Header title="Controle EPI" subtitle="Bom trabalho. Aqui está o panorama operacional de hoje." />
     <DemoBanner />
     <SearchField value={query} onChangeText={setQuery} placeholder="Buscar pessoas, EPI, CA, setor..." />
-    {results.length > 0 ? <Card style={{ gap: 10 }}>{results.map((r,i)=><Pressable key={`${r.label}-${i}`} onPress={r.action} style={styles.searchResult}><Ionicons name="search" size={16} color={colors.blue}/><View style={{flex:1}}><Text style={styles.rowTitle}>{r.label}</Text><Text style={styles.rowMeta}>{r.meta}</Text></View><Ionicons name="chevron-forward" size={18} color={colors.muted}/></Pressable>)}</Card> : null}
+    {results.length > 0 ? <Card style={{ gap: 10 }}>{results.map((r,i)=><Pressable accessibilityRole="button" accessibilityLabel={`${r.label}. ${r.meta}`} key={`${r.label}-${i}`} onPress={r.action} style={styles.searchResult}><Ionicons name="search" size={16} color={colors.blue}/><View style={{flex:1}}><Text style={styles.rowTitle}>{r.label}</Text><Text style={styles.rowMeta}>{r.meta}</Text></View><Ionicons name="chevron-forward" size={18} color={colors.muted}/></Pressable>)}</Card> : null}
     <View style={styles.metrics}><Metric label="Colaboradores ativos" value={active} icon="people" /><Metric label="EPIs cadastrados" value={data.epis.length} icon="shield-checkmark" tone="green" /><Metric label="Saldo disponível" value={balance} icon="cube" tone="green" /><Metric label="Estoque em atenção" value={attention.length} icon="warning" tone="orange" /></View>
     <SectionTitle>Ações rápidas</SectionTitle>
     <View style={styles.shortcuts}><Shortcut icon="add-circle" label="Cadastrar EPI" onPress={() => router.push('/epi/new')} /><Shortcut icon="log-out-outline" label="Registrar entrega" onPress={() => router.push('/delivery/new')} tone={colors.green} /><Shortcut icon="cart" label="Registrar compra" onPress={() => router.push('/purchase/new')} tone={colors.orange} /><Shortcut icon="bar-chart" label="Relatórios" onPress={() => router.push('/reports')} /></View>
     <SectionTitle>Indicadores</SectionTitle>
-    <View style={styles.metrics}><Metric label="Solicitações de troca" value={pending.length} icon="swap-horizontal" tone="orange" /><Metric label="Gastos com EPI" value={money(spend)} icon="cash" tone="green" /><Metric label="Alertas de estoque" value={attention.length} icon="alert-circle" tone="red" /><Metric label="Trocas recentes" value={data.swaps.filter(s=>new Date(s.createdAt)>=new Date('2026-08-21')).length} icon="time" /></View>
+    <View style={styles.metrics}><Metric label="Solicitações de troca" value={pending.length} icon="swap-horizontal" tone="orange" /><Metric label="Gastos com EPI" value={money(spend)} icon="cash" tone="green" /><Metric label="Alertas de estoque" value={attention.length} icon="alert-circle" tone="red" /><Metric label="Trocas em 30 dias" value={recentSwaps} icon="time" /></View>
     <SectionTitle>Estoque em atenção</SectionTitle>
     {attention.slice(0,4).map(epi => <Card key={epi.id} style={styles.alertCard}><View style={{flex:1}}><Text style={styles.rowTitle}>{epi.name}</Text><Text style={styles.rowMeta}>Atual {epi.stock} • mínimo {epi.minStock} • CA {epi.ca}</Text></View><StatusBadge label={getStockStatus(epi)} /></Card>)}
     <PrimaryButton label="Exportar PDF" icon="document-text" loading={exporting} onPress={exportPdf} />
