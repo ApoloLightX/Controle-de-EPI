@@ -12,7 +12,7 @@ export function Screen({ children, scroll = true, safeTop = false }: { children:
 }
 
 export function Header({ title, subtitle, right }: { title: string; subtitle?: string; right?: React.ReactNode }) {
-  return <View style={styles.header}><View style={{ flex: 1 }}><Text style={styles.title}>{title}</Text>{subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}</View>{right}</View>;
+  return <View style={styles.header}><View style={{ flex: 1 }}><Text accessibilityRole="header" style={styles.title}>{title}</Text>{subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}</View>{right}</View>;
 }
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
@@ -20,26 +20,28 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
 }
 
 export function DemoBanner() {
-  return <View style={styles.demo}><Ionicons name="information-circle" size={18} color="#9A6700" /><Text style={styles.demoText}>Dados demonstrativos e editáveis neste dispositivo.</Text></View>;
+  return <View style={styles.demo} accessibilityRole="text"><Ionicons name="information-circle" size={18} color="#9A6700" /><Text style={styles.demoText}>Dados demonstrativos e editáveis neste dispositivo.</Text></View>;
 }
 
 export function SearchField({ value, onChangeText, placeholder = 'Buscar...' }: { value: string; onChangeText: (value: string) => void; placeholder?: string }) {
-  return <View style={styles.search}><Ionicons name="search" size={18} color={colors.muted} /><TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#98A2B3" style={styles.searchInput} /></View>;
+  return <View style={styles.search}><Ionicons name="search" size={18} color={colors.muted} /><TextInput accessibilityLabel={placeholder} value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#98A2B3" style={styles.searchInput} returnKeyType="search" /></View>;
 }
 
 export function Field(props: TextInputProps & { label: string }) {
-  return <View style={{ gap: 6 }}><Text style={styles.label}>{props.label}</Text><TextInput {...props} placeholderTextColor="#98A2B3" style={[styles.input, props.multiline && { minHeight: 90, textAlignVertical: 'top' }, props.style]} /></View>;
+  const { label, accessibilityLabel, style, multiline, ...inputProps } = props;
+  return <View style={{ gap: 6 }}><Text style={styles.label}>{label}</Text><TextInput {...inputProps} accessibilityLabel={accessibilityLabel ?? label} multiline={multiline} placeholderTextColor="#98A2B3" style={[styles.input, multiline && { minHeight: 90, textAlignVertical: 'top' }, style]} /></View>;
 }
 
 export function PrimaryButton({ label, onPress, icon, danger, loading, disabled }: { label: string; onPress: () => void; icon?: keyof typeof Ionicons.glyphMap; danger?: boolean; loading?: boolean; disabled?: boolean }) {
-  return <Pressable accessibilityRole="button" disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [styles.primary, danger && { backgroundColor: colors.red }, (disabled || loading) && { opacity: .5 }, pressed && { opacity: .8 }]}>
+  const unavailable = !!disabled || !!loading;
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: unavailable, busy: !!loading }} disabled={unavailable} onPress={onPress} style={({ pressed }) => [styles.primary, danger && { backgroundColor: colors.red }, unavailable && { opacity: .5 }, pressed && { opacity: .8 }]}>
     {loading ? <ActivityIndicator color="#fff" /> : <>{icon ? <Ionicons name={icon} size={19} color="#fff" /> : null}<Text style={styles.primaryText}>{label}</Text></>}
   </Pressable>;
 }
 
 export function SecondaryButton({ label, onPress, icon, danger, disabled }: { label: string; onPress: () => void; icon?: keyof typeof Ionicons.glyphMap; danger?: boolean; disabled?: boolean }) {
   const textColor = danger ? colors.red : colors.blue;
-  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.secondary, danger && styles.secondaryDanger, disabled && { opacity: .45 }, pressed && { opacity: .7 }]}>{icon ? <Ionicons name={icon} size={18} color={textColor} /> : null}<Text style={[styles.secondaryText, danger && { color: colors.red }]}>{label}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: !!disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.secondary, danger && styles.secondaryDanger, disabled && { opacity: .45 }, pressed && { opacity: .7 }]}>{icon ? <Ionicons name={icon} size={18} color={textColor} /> : null}<Text style={[styles.secondaryText, danger && { color: colors.red }]}>{label}</Text></Pressable>;
 }
 
 export function StatusBadge({ label }: { label: string }) {
@@ -48,7 +50,7 @@ export function StatusBadge({ label }: { label: string }) {
   const palette = green ? [colors.greenSoft, colors.green]
     : orange ? [colors.orangeSoft, '#9A6700']
       : [colors.redSoft, colors.red];
-  return <View style={[styles.badge, { backgroundColor: palette[0] }]}><Text style={[styles.badgeText, { color: palette[1] }]}>{label}</Text></View>;
+  return <View accessibilityLabel={`Status: ${label}`} style={[styles.badge, { backgroundColor: palette[0] }]}><Text style={[styles.badgeText, { color: palette[1] }]}>{label}</Text></View>;
 }
 
 export function Metric({ label, value, icon, tone = 'blue' }: { label: string; value: string | number; icon: keyof typeof Ionicons.glyphMap; tone?: 'blue' | 'green' | 'orange' | 'red' }) {
@@ -57,11 +59,11 @@ export function Metric({ label, value, icon, tone = 'blue' }: { label: string; v
 }
 
 export function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
-  return <View style={styles.sectionTitle}><Text style={styles.sectionTitleText}>{children}</Text>{action}</View>;
+  return <View style={styles.sectionTitle}><Text accessibilityRole="header" style={styles.sectionTitleText}>{children}</Text>{action}</View>;
 }
 
 export function EmptyState({ title, body }: { title: string; body: string }) {
-  return <Card style={{ alignItems: 'center', gap: 8, paddingVertical: 26 }}><Ionicons name="file-tray-outline" size={30} color={colors.muted} /><Text style={{ fontWeight: '800', color: colors.text }}>{title}</Text><Text style={{ color: colors.muted, textAlign: 'center' }}>{body}</Text></Card>;
+  return <Card style={{ alignItems: 'center', gap: 8, paddingVertical: 26 }}><Ionicons name="file-tray-outline" size={30} color={colors.muted} /><Text accessibilityRole="header" style={{ fontWeight: '800', color: colors.text }}>{title}</Text><Text style={{ color: colors.muted, textAlign: 'center' }}>{body}</Text></Card>;
 }
 
 const styles = StyleSheet.create({
