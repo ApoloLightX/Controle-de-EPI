@@ -15,8 +15,8 @@ export default function PersonDetail() {
   if (!isAdmin && session?.employeeId !== employee.id) return <Screen><EmptyState title="Acesso limitado" body="Funcionários podem consultar apenas a própria ficha."/></Screen>;
 
   const deliveries = data.deliveries.filter(d => d.employeeId === employee.id);
-  const episInUse = Array.from(new Set(deliveries.map(d => d.epiId))).map(epiId => data.epis.find(e => e.id === epiId)).filter(Boolean);
-  const cost = deliveries.reduce((sum,d) => sum + (data.epis.find(e=>e.id===d.epiId)?.unitValue ?? 0) * d.quantity, 0);
+  const episReceived = Array.from(new Set(deliveries.map(d => d.epiId))).map(epiId => data.epis.find(e => e.id === epiId)).filter(Boolean);
+  const estimatedCost = deliveries.reduce((sum,d) => sum + (data.epis.find(e=>e.id===d.epiId)?.unitValue ?? 0) * d.quantity, 0);
   const remove = () => Alert.alert('Excluir colaborador', `Excluir ${employee.name}? Colaboradores com entregas ou trocas vinculadas serão preservados para manter o histórico.`, [
     {text:'Cancelar',style:'cancel'},
     {text:'Excluir',style:'destructive',onPress:async()=>{
@@ -29,12 +29,12 @@ export default function PersonDetail() {
   return <Screen>
     <Card style={{ gap: 14 }}>
       <View style={styles.top}><View style={styles.avatar}><Text style={styles.avatarText}>{employee.avatarInitials}</Text></View><View style={{flex:1}}><Text style={styles.name}>{employee.name}</Text><Text style={styles.meta}>Matrícula: {employee.registration}</Text><Text style={styles.meta}>{employee.sector} • {employee.jobTitle}</Text></View><StatusBadge label={employee.status}/></View>
-      <View style={styles.infoGrid}><Info label="Admissão" value={shortDate(employee.admissionDate)}/><Info label="E-mail" value={employee.email ?? 'Não informado'}/><Info label="Telefone" value={employee.phone ?? 'Não informado'}/><Info label="Custo acumulado" value={money(cost)}/></View>
+      <View style={styles.infoGrid}><Info label="Admissão" value={shortDate(employee.admissionDate)}/><Info label="E-mail" value={employee.email ?? 'Não informado'}/><Info label="Telefone" value={employee.phone ?? 'Não informado'}/><Info label="Custo estimado" value={money(estimatedCost)}/></View>
       {isAdmin ? <View style={styles.actions}><SecondaryButton label="Editar" icon="create-outline" onPress={()=>router.push({pathname:'/employee-form',params:{id:employee.id}})}/><Pressable accessibilityRole="button" accessibilityLabel={`Excluir ${employee.name}`} onPress={remove} style={styles.delete}><Ionicons name="trash-outline" size={18} color={colors.red}/><Text style={styles.deleteText}>Excluir</Text></Pressable></View>:null}
     </Card>
 
-    <SectionTitle>EPIs em uso</SectionTitle>
-    {episInUse.length ? episInUse.map(epi => epi ? <Card key={epi.id}><Text style={styles.itemTitle}>{epi.name}</Text><Text style={styles.meta}>{epi.brand} {epi.model} • CA {epi.ca} • Tam. {epi.size}</Text></Card> : null) : <EmptyState title="Nenhum EPI registrado" body="As entregas aparecerão aqui."/>}
+    <SectionTitle>EPIs recebidos no histórico</SectionTitle>
+    {episReceived.length ? episReceived.map(epi => epi ? <Card key={epi.id}><Text style={styles.itemTitle}>{epi.name}</Text><Text style={styles.meta}>{epi.brand} {epi.model} • CA {epi.ca} • Tam. {epi.size}</Text></Card> : null) : <EmptyState title="Nenhum EPI registrado" body="As entregas aparecerão aqui."/>}
 
     <SectionTitle>Histórico de entregas</SectionTitle>
     {deliveries.length ? deliveries.map(d=>{const epi=data.epis.find(e=>e.id===d.epiId);return <Card key={d.id}><Text style={styles.itemTitle}>{epi?.name ?? 'EPI'}</Text><Text style={styles.meta}>{d.quantity} un. • {shortDate(d.deliveredAt)} • {d.reason}</Text></Card>}) : <EmptyState title="Nenhuma entrega" body="As entregas registradas aparecerão aqui." />}
