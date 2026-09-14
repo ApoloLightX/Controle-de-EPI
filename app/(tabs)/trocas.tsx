@@ -8,7 +8,7 @@ import type { SwapStatus } from '@/models';
 import { colors } from '@/theme';
 import { shortDate } from '@/utils/format';
 
-const filters: Array<'Todas' | SwapStatus> = ['Todas', 'Pendente', 'Em análise', 'Aprovada', 'Aguardando estoque', 'Concluída', 'Reprovada'];
+const filters: ('Todas' | SwapStatus)[] = ['Todas', 'Pendente', 'Em análise', 'Aprovada', 'Aguardando estoque', 'Concluída', 'Reprovada'];
 
 export default function SwapsScreen() {
   const { data, session, setSwapStatus } = useApp();
