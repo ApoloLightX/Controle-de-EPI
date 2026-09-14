@@ -28,11 +28,12 @@ test('regras de estoque', () => {
   assert.equal(applyStockExit(3, 2), 1);
 });
 
-test('cálculo de compras com múltiplos itens', () => {
+test('cálculo de compras com múltiplos itens e precisão de centavos', () => {
   assert.equal(calculatePurchaseTotal([
     { epiId: 'a', quantity: 2, unitValue: 10 },
     { epiId: 'b', quantity: 3, unitValue: 5.5 },
   ]), 36.5);
+  assert.equal(calculatePurchaseTotal([{ epiId: 'a', quantity: 3, unitValue: 0.1 }]), 0.3);
   assert.throws(() => calculatePurchaseTotal([{ epiId: 'a', quantity: 1.5, unitValue: 10 }]), /Item de compra inválido/);
   assert.throws(() => calculatePurchaseTotal([{ epiId: 'a', quantity: 1, unitValue: -1 }]), /Item de compra inválido/);
   assert.throws(() => calculatePurchaseTotal([{ epiId: 'a', quantity: 0, unitValue: 10 }]), /Item de compra inválido/);
