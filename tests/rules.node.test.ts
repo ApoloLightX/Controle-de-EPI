@@ -88,7 +88,14 @@ test('janela móvel considera somente datas passadas recentes', () => {
   assert.equal(isWithinPastDays('2026-09-15', 30, now), false);
 });
 
-test('nowDate usa a data civil local em vez de UTC', () => {
-  const localLateNight = new Date(2026, 8, 14, 23, 30, 0);
-  assert.equal(nowDate(localLateNight), '2026-09-14');
+test('nowDate usa a data civil de São Paulo em vez da data UTC', () => {
+  const previousTimezone = process.env.TZ;
+  process.env.TZ = 'America/Sao_Paulo';
+  try {
+    const lateNightInSaoPaulo = new Date('2026-09-15T02:30:00Z');
+    assert.equal(nowDate(lateNightInSaoPaulo), '2026-09-14');
+  } finally {
+    if (previousTimezone === undefined) delete process.env.TZ;
+    else process.env.TZ = previousTimezone;
+  }
 });
