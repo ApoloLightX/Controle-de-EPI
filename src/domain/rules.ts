@@ -1,5 +1,7 @@
 import type { CaAlertLevel, Epi, PurchaseItem, SwapRequest } from '../models';
 
+export type SwapAction = 'approve' | 'reject' | 'analysis' | 'complete';
+
 export function getStockStatus(epi: Pick<Epi, 'stock' | 'minStock'>) {
   if (epi.stock <= 0) return 'Sem estoque' as const;
   if (epi.stock <= epi.minStock) return 'Estoque baixo' as const;
@@ -17,12 +19,14 @@ export function applyStockExit(stock: number, quantity: number) {
 }
 
 export function calculatePurchaseTotal(items: PurchaseItem[]) {
-  return items.reduce((total, item) => {
+  const totalCents = items.reduce((total, item) => {
     if (!Number.isInteger(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitValue) || item.unitValue < 0) {
       throw new Error('Item de compra inválido');
     }
-    return total + item.quantity * item.unitValue;
+    const unitCents = Math.round(item.unitValue * 100);
+    return total + item.quantity * unitCents;
   }, 0);
+  return totalCents / 100;
 }
 
 export function daysUntil(date: string, now = new Date()) {
@@ -35,6 +39,20 @@ export function daysUntil(date: string, now = new Date()) {
   if (target.getFullYear() !== year || target.getMonth() !== month - 1 || target.getDate() !== day) return Number.NaN;
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+
+export function isValidIsoDate(date: string) {
+  return Number.isFinite(daysUntil(date));
+}
+
+export function isValidPin(pin: string) {
+  return /^\d{4,8}$/.test(pin);
+}
+
+export function isWithinPastDays(date: string, days: number, now = new Date()) {
+  if (!Number.isInteger(days) || days < 0) return false;
+  const distance = daysUntil(date, now);
+  return Number.isFinite(distance) && distance <= 0 && distance >= -days;
 }
 
 export function getCaAlertLevel(caValidity: string, now = new Date()): CaAlertLevel {
@@ -53,4 +71,12 @@ export function nextSwapStatusForApproval(epi: Pick<Epi, 'stock'>, quantity = 1)
 export function canCompleteSwap(swap: Pick<SwapRequest, 'status' | 'quantity'>, epi: Pick<Epi, 'stock'>) {
   const quantity = swap.quantity ?? 1;
   return ['Aprovada', 'Aguardando estoque'].includes(swap.status) && Number.isInteger(quantity) && quantity > 0 && epi.stock >= quantity;
+}
+
+export function canApplySwapAction(swap: Pick<SwapRequest, 'status'>, action: SwapAction) {
+  if (['Concluída', 'Reprovada'].includes(swap.status)) return false;
+  if (action === 'analysis') return swap.status === 'Pendente';
+  if (action === 'approve') return ['Pendente', 'Em análise'].includes(swap.status);
+  if (action === 'complete') return ['Aprovada', 'Aguardando estoque'].includes(swap.status);
+  return ['Pendente', 'Em análise', 'Aprovada', 'Aguardando estoque'].includes(swap.status);
 }

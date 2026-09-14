@@ -43,7 +43,7 @@ export default function StockScreen() {
     return <Screen safeTop>
       <Header title="Meus EPIs" subtitle="Equipamentos registrados no seu histórico de entrega." />
       {byEpi.length ? byEpi.map(({ epi, qty }) => epi ? <Card key={epi.id} style={{ gap: 8 }}>
-        <View style={styles.top}><View style={{ flex: 1 }}><Text style={styles.name}>{epi.name}</Text><Text style={styles.meta}>{epi.brand} {epi.model} • Tam. {epi.size}</Text></View><View style={styles.qty}><Text style={styles.qtyText}>{qty}</Text></View></View>
+        <View style={styles.top}><View style={{ flex: 1 }}><Text style={styles.name}>{epi.name}</Text><Text style={styles.meta}>{epi.brand} {epi.model} • Tam. {epi.size}</Text></View><View accessibilityLabel={`${qty} unidade(s) recebida(s) no histórico`} style={styles.qty}><Text style={styles.qtyText}>{qty}</Text></View></View>
         <View style={styles.line}><Text style={styles.meta}>CA {epi.ca} • validade {shortDate(epi.caValidity)}</Text><StatusBadge label={getCaAlertLevel(epi.caValidity)} /></View>
       </Card> : null) : <EmptyState title="Nenhum EPI recebido" body="Suas entregas aparecerão aqui." />}
     </Screen>;
@@ -57,7 +57,7 @@ export default function StockScreen() {
   });
 
   return <Screen safeTop>
-    <Header title="Estoque" subtitle={`${data.epis.length} EPIs cadastrados`} right={<Pressable accessibilityLabel="Cadastrar EPI" onPress={() => router.push('/epi/new')} style={styles.add}><Ionicons name="add" size={24} color="#fff" /></Pressable>} />
+    <Header title="Estoque" subtitle={`${data.epis.length} EPIs cadastrados`} right={<Pressable accessibilityRole="button" accessibilityLabel="Cadastrar EPI" onPress={() => router.push('/epi/new')} style={styles.add}><Ionicons name="add" size={24} color="#fff" /></Pressable>} />
     <SearchField value={query} onChangeText={setQuery} placeholder="Buscar EPI, marca, CA ou fornecedor" />
     <View style={styles.filters}>
       <FilterPill label={`Categoria: ${category}`} onPress={cycleCategory} />
@@ -68,14 +68,14 @@ export default function StockScreen() {
       <View style={styles.top}><View style={{ flex: 1 }}><Text style={styles.name}>{epi.name}</Text><Text style={styles.meta}>{epi.category} • {epi.brand} {epi.model} • Tam. {epi.size}</Text></View><StatusBadge label={getStockStatus(epi)} /></View>
       <View style={styles.line}><Text style={styles.stock}>Estoque {epi.stock}</Text><Text style={styles.meta}>Mínimo {epi.minStock}</Text><Text style={styles.meta}>Criticidade {getCriticality(epi.stock, epi.minStock)}</Text></View>
       <View style={styles.line}><Text style={styles.meta}>CA {epi.ca} • validade {shortDate(epi.caValidity)}</Text><StatusBadge label={getCaAlertLevel(epi.caValidity)} /></View>
-      <Text style={styles.meta}>{money(epi.unitValue)} • {epi.supplier} • última compra {shortDate(epi.lastPurchase)}</Text>
-      <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/epi/edit', params: { id: epi.id } })} style={styles.manage}><Ionicons name="create-outline" size={18} color={colors.blue} /><Text style={styles.manageText}>Ver ficha e editar</Text><Ionicons name="chevron-forward" size={18} color={colors.blue} /></Pressable>
+      <Text style={styles.meta}>{money(epi.unitValue)} • {epi.supplier} • última referência {shortDate(epi.lastPurchase)}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Ver ficha e editar ${epi.name}`} onPress={() => router.push({ pathname: '/epi/edit', params: { id: epi.id } })} style={styles.manage}><Ionicons name="create-outline" size={18} color={colors.blue} /><Text style={styles.manageText}>Ver ficha e editar</Text><Ionicons name="chevron-forward" size={18} color={colors.blue} /></Pressable>
     </Card>) : <EmptyState title="Nenhum item encontrado" body="Ajuste os filtros ou a busca para ver outros EPIs." />}
   </Screen>;
 }
 
 function FilterPill({ label, onPress }: { label: string; onPress: () => void }) {
-  return <Pressable onPress={onPress} style={({ pressed }) => [styles.filter, pressed && { opacity: .7 }]}><Ionicons name="filter" size={16} color={colors.blue} /><Text style={styles.filterText} numberOfLines={1}>{label}</Text><Ionicons name="chevron-down" size={15} color={colors.blue} /></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${label}. Toque para alterar.`} onPress={onPress} style={({ pressed }) => [styles.filter, pressed && { opacity: .7 }]}><Ionicons name="filter" size={16} color={colors.blue} /><Text style={styles.filterText} numberOfLines={1}>{label}</Text><Ionicons name="chevron-down" size={15} color={colors.blue} /></Pressable>;
 }
 
 const styles = StyleSheet.create({
