@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Card, EmptyState, Header, Screen } from '@/components/UI';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { shareAsync } from 'expo-sharing';
+import { Card, EmptyState, Header, Screen, SecondaryButton } from '@/components/UI';
 import { useApp } from '@/context/AppContext';
 import { colors } from '@/theme';
 import { money, shortDate } from '@/utils/format';
@@ -9,12 +10,22 @@ import { money, shortDate } from '@/utils/format';
 export default function PurchasesScreen() {
   const { data, session } = useApp();
   if (session?.role !== 'admin') return <Screen><EmptyState title="Acesso limitado" body="Compras são visíveis apenas para administradores." /></Screen>;
+
+  const openDocument = async (uri: string) => {
+    try {
+      await shareAsync(uri, { dialogTitle: 'Abrir ou compartilhar documento da compra' });
+    } catch {
+      Alert.alert('Anexo indisponível', 'O arquivo não está mais disponível neste dispositivo. Anexos feitos nesta versão passam a ser preservados fora do cache temporário.');
+    }
+  };
+
   return <Screen>
-    <Header title="Compras" subtitle={`${data.purchases.length} compras registradas`} right={<Pressable accessibilityLabel="Registrar compra" onPress={() => router.push('/purchase/new')} style={styles.add}><Ionicons name="add" size={24} color="#fff" /></Pressable>} />
+    <Header title="Compras" subtitle={`${data.purchases.length} compras registradas`} right={<Pressable accessibilityRole="button" accessibilityLabel="Registrar compra" onPress={() => router.push('/purchase/new')} style={styles.add}><Ionicons name="add" size={24} color="#fff" /></Pressable>} />
     {data.purchases.length ? data.purchases.map(purchase => <Card key={purchase.id} style={{ gap: 8 }}>
       <View style={styles.top}><View style={{ flex: 1 }}><Text style={styles.title}>{purchase.supplier}</Text><Text style={styles.meta}>{purchase.cnpj} • NF {purchase.invoice}</Text></View><Text style={styles.total}>{money(purchase.total)}</Text></View>
       <Text style={styles.meta}>{shortDate(purchase.purchasedAt)} • {purchase.items.length} item(ns) • {purchase.documentUri ? 'documento anexado' : 'sem anexo'}</Text>
       {purchase.items.map((item, index) => <Text key={`${purchase.id}-${index}`} style={styles.item}>{data.epis.find(e => e.id === item.epiId)?.name ?? 'EPI'} • {item.quantity} un. × {money(item.unitValue)}</Text>)}
+      {purchase.documentUri ? <SecondaryButton label="Abrir ou compartilhar anexo" icon="document-attach-outline" onPress={() => openDocument(purchase.documentUri!)} /> : null}
     </Card>) : <EmptyState title="Nenhuma compra" body="Registre a primeira compra para gerar entradas de estoque." />}
   </Screen>;
 }
