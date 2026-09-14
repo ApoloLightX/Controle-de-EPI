@@ -8,13 +8,18 @@ import { money } from '@/utils/format';
 import { getCaAlertLevel, getStockStatus } from '@/domain/rules';
 import { colors } from '@/theme';
 
+function csvCell(value: unknown) {
+  const raw = String(value ?? '');
+  const safe = typeof value === 'string' && /^[\s]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
+  return `"${safe.replaceAll('"', '""')}"`;
+}
+
 export default function Reports() {
   const { data, session } = useApp();
   if (session?.role !== 'admin') return <Screen><Card><Text style={{ color: colors.text }}>Relatórios consolidados são restritos ao administrador.</Text></Card></Screen>;
 
   const shareCsv = async (fileName: string, head: string[], rows: unknown[][]) => {
-    const esc = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}"`;
-    const csv = [head, ...rows].map(row => row.map(esc).join(';')).join('\n');
+    const csv = [head, ...rows].map(row => row.map(csvCell).join(';')).join('\n');
     const base = FileSystem.cacheDirectory;
     if (!base) throw new Error('Diretório temporário indisponível');
     const uri = `${base}${fileName}`;
