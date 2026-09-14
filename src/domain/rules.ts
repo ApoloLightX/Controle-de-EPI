@@ -19,12 +19,14 @@ export function applyStockExit(stock: number, quantity: number) {
 }
 
 export function calculatePurchaseTotal(items: PurchaseItem[]) {
-  return items.reduce((total, item) => {
+  const totalCents = items.reduce((total, item) => {
     if (!Number.isInteger(item.quantity) || item.quantity <= 0 || !Number.isFinite(item.unitValue) || item.unitValue < 0) {
       throw new Error('Item de compra inválido');
     }
-    return total + item.quantity * item.unitValue;
+    const unitCents = Math.round(item.unitValue * 100);
+    return total + item.quantity * unitCents;
   }, 0);
+  return totalCents / 100;
 }
 
 export function daysUntil(date: string, now = new Date()) {
