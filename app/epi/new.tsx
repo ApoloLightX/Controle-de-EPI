@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, View } from 'react-native';
 import { Field, PrimaryButton, Screen } from '@/components/UI';
 import { useApp } from '@/context/AppContext';
+import { isValidIsoDate } from '@/domain/rules';
 
 export default function NewEpi() {
   const { session, addEpi } = useApp();
@@ -27,9 +28,9 @@ export default function NewEpi() {
     const minimum = Number(minStock.replace(',', '.'));
     const value = Number(unitValue.replace(',', '.'));
     if (!Number.isInteger(currentStock) || currentStock < 0 || !Number.isInteger(minimum) || minimum < 0 || !Number.isFinite(value) || value < 0) return Alert.alert('Valores inválidos', 'Estoque atual e mínimo precisam ser inteiros não negativos. Confira também o valor unitário.');
-    if (Number.isNaN(new Date(`${caValidity}T12:00:00`).getTime())) return Alert.alert('Data inválida', 'Use a validade do CA no formato AAAA-MM-DD.');
+    if (!isValidIsoDate(caValidity.trim())) return Alert.alert('Data inválida', 'Use a validade do CA no formato AAAA-MM-DD.');
     setSaving(true);
-    await addEpi({ name: name.trim(), category: category.trim(), brand: brand.trim(), model: model.trim(), size: size.trim(), ca: ca.trim(), caValidity, stock: currentStock, minStock: minimum, unitValue: value, supplier: supplier.trim() });
+    await addEpi({ name: name.trim(), category: category.trim(), brand: brand.trim(), model: model.trim(), size: size.trim(), ca: ca.trim(), caValidity: caValidity.trim(), stock: currentStock, minStock: minimum, unitValue: value, supplier: supplier.trim() });
     setSaving(false);
     router.back();
   };
