@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { colors } from '@/theme';
 
 export default function TabsLayout() {
-  const { session } = useApp();
-  const employee = session?.role === 'employee';
+  const { ready, session } = useApp();
+  if (!ready) return null;
+  if (!session) return <Redirect href="/login" />;
+
+  const employee = session.role === 'employee';
   return <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.blue, tabBarInactiveTintColor: '#7A8491', tabBarStyle: { height: 68, paddingTop: 7, paddingBottom: 8, borderTopColor: colors.border, backgroundColor: '#fff' }, tabBarLabelStyle: { fontSize: 11, fontWeight: '700' } }}>
     <Tabs.Screen name="index" options={{ title: 'Início', tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} /> }} />
     <Tabs.Screen name="pessoas" options={{ title: employee ? 'Meu perfil' : 'Pessoas', tabBarIcon: ({ color, size }) => <Ionicons name={employee ? 'person-circle' : 'people'} color={color} size={size} /> }} />
